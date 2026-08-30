@@ -1,0 +1,15 @@
+dir: "{{.InterfaceDir}}/mocks"
+filename: "{{.InterfaceName}}.go"
+structname: "Mock{{.InterfaceName}}"
+pkgname: "mocks"
+
+packages:
+  github.com/st-ember/microtip/internal/app/port/cache:
+    config:
+      all: true
+  github.com/st-ember/microtip/internal/app/port/repo:
+    config:
+      all: true
+  github.com/st-ember/microtip/internal/app/usecase:
+    config:
+      all: true

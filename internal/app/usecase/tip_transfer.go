@@ -201,7 +201,9 @@ func (tu *tipTransferUsecase) splitTip(amount int64) (cShare, pShare int64) {
 
 func (tu *tipTransferUsecase) saveOrInvalidateCache(ctx context.Context, b *domain.Balance) error {
 	if err := tu.cache.SaveBalance(ctx, b); err != nil {
-		tu.cache.InvalidateKey(ctx, b.UserID)
+		// TODO: log error
+		_ = tu.cache.InvalidateKey(ctx, b.UserID)
+
 		return fmt.Errorf("save cache for user %s: %w", b.UserID, err)
 	}
 

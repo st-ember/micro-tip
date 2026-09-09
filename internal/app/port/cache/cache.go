@@ -9,5 +9,7 @@ import (
 type Cache interface {
 	ReadBalance(ctx context.Context, key string) (*domain.Balance, error)
 	SaveBalance(ctx context.Context, balance *domain.Balance) error
+	ReadOrder(ctx context.Context, key string) (*domain.Order, error)
+	SaveOrder(ctx context.Context, order *domain.Order) error
 	InvalidateKey(ctx context.Context, key string) error
 }

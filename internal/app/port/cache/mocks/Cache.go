@@ -163,6 +163,74 @@ func (_c *MockCache_ReadBalance_Call) RunAndReturn(run func(ctx context.Context,
 	return _c
 }
 
+// ReadOrder provides a mock function for the type MockCache
+func (_mock *MockCache) ReadOrder(ctx context.Context, key string) (*domain.Order, error) {
+	ret := _mock.Called(ctx, key)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ReadOrder")
+	}
+
+	var r0 *domain.Order
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*domain.Order, error)); ok {
+		return returnFunc(ctx, key)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *domain.Order); ok {
+		r0 = returnFunc(ctx, key)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*domain.Order)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, key)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCache_ReadOrder_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReadOrder'
+type MockCache_ReadOrder_Call struct {
+	*mock.Call
+}
+
+// ReadOrder is a helper method to define mock.On call
+//   - ctx context.Context
+//   - key string
+func (_e *MockCache_Expecter) ReadOrder(ctx interface{}, key interface{}) *MockCache_ReadOrder_Call {
+	return &MockCache_ReadOrder_Call{Call: _e.mock.On("ReadOrder", ctx, key)}
+}
+
+func (_c *MockCache_ReadOrder_Call) Run(run func(ctx context.Context, key string)) *MockCache_ReadOrder_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCache_ReadOrder_Call) Return(order *domain.Order, err error) *MockCache_ReadOrder_Call {
+	_c.Call.Return(order, err)
+	return _c
+}
+
+func (_c *MockCache_ReadOrder_Call) RunAndReturn(run func(ctx context.Context, key string) (*domain.Order, error)) *MockCache_ReadOrder_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SaveBalance provides a mock function for the type MockCache
 func (_mock *MockCache) SaveBalance(ctx context.Context, balance *domain.Balance) error {
 	ret := _mock.Called(ctx, balance)
@@ -216,6 +284,63 @@ func (_c *MockCache_SaveBalance_Call) Return(err error) *MockCache_SaveBalance_C
 }
 
 func (_c *MockCache_SaveBalance_Call) RunAndReturn(run func(ctx context.Context, balance *domain.Balance) error) *MockCache_SaveBalance_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SaveOrder provides a mock function for the type MockCache
+func (_mock *MockCache) SaveOrder(ctx context.Context, order *domain.Order) error {
+	ret := _mock.Called(ctx, order)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SaveOrder")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *domain.Order) error); ok {
+		r0 = returnFunc(ctx, order)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockCache_SaveOrder_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveOrder'
+type MockCache_SaveOrder_Call struct {
+	*mock.Call
+}
+
+// SaveOrder is a helper method to define mock.On call
+//   - ctx context.Context
+//   - order *domain.Order
+func (_e *MockCache_Expecter) SaveOrder(ctx interface{}, order interface{}) *MockCache_SaveOrder_Call {
+	return &MockCache_SaveOrder_Call{Call: _e.mock.On("SaveOrder", ctx, order)}
+}
+
+func (_c *MockCache_SaveOrder_Call) Run(run func(ctx context.Context, order *domain.Order)) *MockCache_SaveOrder_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *domain.Order
+		if args[1] != nil {
+			arg1 = args[1].(*domain.Order)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCache_SaveOrder_Call) Return(err error) *MockCache_SaveOrder_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockCache_SaveOrder_Call) RunAndReturn(run func(ctx context.Context, order *domain.Order) error) *MockCache_SaveOrder_Call {
 	_c.Call.Return(run)
 	return _c
 }

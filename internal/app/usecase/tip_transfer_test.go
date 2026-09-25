@@ -9,7 +9,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
+	nopmetrics "github.com/st-ember/microtip/internal/adpt/driven/metrics/prometheus/nop"
+	"github.com/st-ember/microtip/internal/app/port/cache"
 	cacheMocks "github.com/st-ember/microtip/internal/app/port/cache/mocks"
+	logMocks "github.com/st-ember/microtip/internal/app/port/log/mocks"
+	"github.com/st-ember/microtip/internal/app/port/repo"
 	repoMocks "github.com/st-ember/microtip/internal/app/port/repo/mocks"
 	"github.com/st-ember/microtip/internal/app/usecase"
 	"github.com/st-ember/microtip/internal/domain"
@@ -101,7 +105,7 @@ func TestTipTransferUsecase(t *testing.T) {
 		})).Return(nil).Once()
 
 		// Execute
-		tu := usecase.NewTipTransferUsecase(uowfMock, cacheMock, bRepoReadOnlyMock, splitBasisPoints, platformID)
+		tu := newTipTransferUsecase(t, uowfMock, cacheMock, bRepoReadOnlyMock, splitBasisPoints, platformID)
 		err := tu.Execute(ctx, cmd)
 		assert.NoError(t, err)
 	})
@@ -146,7 +150,7 @@ func TestTipTransferUsecase(t *testing.T) {
 		// Cache save
 		cacheMock.EXPECT().SaveBalance(ctx, mock.Anything).Return(nil).Times(3)
 
-		tu := usecase.NewTipTransferUsecase(uowfMock, cacheMock, bRepoReadOnlyMock, splitBasisPoints, platformID)
+		tu := newTipTransferUsecase(t, uowfMock, cacheMock, bRepoReadOnlyMock, splitBasisPoints, platformID)
 		err := tu.Execute(ctx, cmd)
 		assert.NoError(t, err)
 	})
@@ -167,7 +171,7 @@ func TestTipTransferUsecase(t *testing.T) {
 		uowMock.EXPECT().BalanceRepo().Return(bRepoMock).Once()
 		uowMock.EXPECT().Rollback(ctx).Return(nil).Once()
 
-		tu := usecase.NewTipTransferUsecase(uowfMock, cacheMock, bRepoReadOnlyMock, splitBasisPoints, platformID)
+		tu := newTipTransferUsecase(t, uowfMock, cacheMock, bRepoReadOnlyMock, splitBasisPoints, platformID)
 		err := tu.Execute(ctx, cmd)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "retrieve sender balance: read cache for user sender-123")
@@ -190,7 +194,7 @@ func TestTipTransferUsecase(t *testing.T) {
 		uowMock.EXPECT().BalanceRepo().Return(bRepoMock).Once()
 		uowMock.EXPECT().Rollback(ctx).Return(nil).Once()
 
-		tu := usecase.NewTipTransferUsecase(uowfMock, cacheMock, bRepoReadOnlyMock, splitBasisPoints, platformID)
+		tu := newTipTransferUsecase(t, uowfMock, cacheMock, bRepoReadOnlyMock, splitBasisPoints, platformID)
 		err := tu.Execute(ctx, cmd)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "retrieve sender balance: get balance from db for user sender-123")
@@ -213,7 +217,7 @@ func TestTipTransferUsecase(t *testing.T) {
 		uowMock.EXPECT().BalanceRepo().Return(bRepoMock).Once()
 		uowMock.EXPECT().Rollback(ctx).Return(nil).Once()
 
-		tu := usecase.NewTipTransferUsecase(uowfMock, cacheMock, bRepoReadOnlyMock, splitBasisPoints, platformID)
+		tu := newTipTransferUsecase(t, uowfMock, cacheMock, bRepoReadOnlyMock, splitBasisPoints, platformID)
 		err := tu.Execute(ctx, cmd)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "insufficient balance for sender sender-123: have 0, need 100")
@@ -236,7 +240,7 @@ func TestTipTransferUsecase(t *testing.T) {
 		uowMock.EXPECT().BalanceRepo().Return(bRepoMock).Once()
 		uowMock.EXPECT().Rollback(ctx).Return(nil).Once()
 
-		tu := usecase.NewTipTransferUsecase(uowfMock, cacheMock, bRepoReadOnlyMock, splitBasisPoints, platformID)
+		tu := newTipTransferUsecase(t, uowfMock, cacheMock, bRepoReadOnlyMock, splitBasisPoints, platformID)
 		err := tu.Execute(ctx, cmd)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "insufficient balance for sender sender-123: have 50, need 100")
@@ -262,7 +266,7 @@ func TestTipTransferUsecase(t *testing.T) {
 		uowMock.EXPECT().BalanceRepo().Return(bRepoMock).Once()
 		uowMock.EXPECT().Rollback(ctx).Return(nil).Once()
 
-		tu := usecase.NewTipTransferUsecase(uowfMock, cacheMock, bRepoReadOnlyMock, splitBasisPoints, platformID)
+		tu := newTipTransferUsecase(t, uowfMock, cacheMock, bRepoReadOnlyMock, splitBasisPoints, platformID)
 		err := tu.Execute(ctx, cmd)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "retrieve creator balance: get balance from db for user creator-456")
@@ -290,7 +294,7 @@ func TestTipTransferUsecase(t *testing.T) {
 		uowMock.EXPECT().BalanceRepo().Return(bRepoMock).Once()
 		uowMock.EXPECT().Rollback(ctx).Return(nil).Once()
 
-		tu := usecase.NewTipTransferUsecase(uowfMock, cacheMock, bRepoReadOnlyMock, splitBasisPoints, platformID)
+		tu := newTipTransferUsecase(t, uowfMock, cacheMock, bRepoReadOnlyMock, splitBasisPoints, platformID)
 		err := tu.Execute(ctx, cmd)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "retrieve platform balance: get balance from db for user platform-789")
@@ -322,7 +326,7 @@ func TestTipTransferUsecase(t *testing.T) {
 			return entry.UserID == senderID
 		})).Return(dbErr).Once()
 
-		tu := usecase.NewTipTransferUsecase(uowfMock, cacheMock, bRepoReadOnlyMock, splitBasisPoints, platformID)
+		tu := newTipTransferUsecase(t, uowfMock, cacheMock, bRepoReadOnlyMock, splitBasisPoints, platformID)
 		err := tu.Execute(ctx, cmd)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "save sender ledger entry")
@@ -358,7 +362,7 @@ func TestTipTransferUsecase(t *testing.T) {
 			return entry.UserID == creatorID
 		})).Return(dbErr).Once()
 
-		tu := usecase.NewTipTransferUsecase(uowfMock, cacheMock, bRepoReadOnlyMock, splitBasisPoints, platformID)
+		tu := newTipTransferUsecase(t, uowfMock, cacheMock, bRepoReadOnlyMock, splitBasisPoints, platformID)
 		err := tu.Execute(ctx, cmd)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "save creator ledger entry")
@@ -398,7 +402,7 @@ func TestTipTransferUsecase(t *testing.T) {
 			return entry.UserID == platformID
 		})).Return(dbErr).Once()
 
-		tu := usecase.NewTipTransferUsecase(uowfMock, cacheMock, bRepoReadOnlyMock, splitBasisPoints, platformID)
+		tu := newTipTransferUsecase(t, uowfMock, cacheMock, bRepoReadOnlyMock, splitBasisPoints, platformID)
 		err := tu.Execute(ctx, cmd)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "save platform ledger entry")
@@ -432,7 +436,7 @@ func TestTipTransferUsecase(t *testing.T) {
 			return b.UserID == senderID
 		})).Return(dbErr).Once()
 
-		tu := usecase.NewTipTransferUsecase(uowfMock, cacheMock, bRepoReadOnlyMock, splitBasisPoints, platformID)
+		tu := newTipTransferUsecase(t, uowfMock, cacheMock, bRepoReadOnlyMock, splitBasisPoints, platformID)
 		err := tu.Execute(ctx, cmd)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "save sender balance")
@@ -470,7 +474,7 @@ func TestTipTransferUsecase(t *testing.T) {
 			return b.UserID == creatorID
 		})).Return(dbErr).Once()
 
-		tu := usecase.NewTipTransferUsecase(uowfMock, cacheMock, bRepoReadOnlyMock, splitBasisPoints, platformID)
+		tu := newTipTransferUsecase(t, uowfMock, cacheMock, bRepoReadOnlyMock, splitBasisPoints, platformID)
 		err := tu.Execute(ctx, cmd)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "save creator balance")
@@ -512,7 +516,7 @@ func TestTipTransferUsecase(t *testing.T) {
 			return b.UserID == platformID
 		})).Return(dbErr).Once()
 
-		tu := usecase.NewTipTransferUsecase(uowfMock, cacheMock, bRepoReadOnlyMock, splitBasisPoints, platformID)
+		tu := newTipTransferUsecase(t, uowfMock, cacheMock, bRepoReadOnlyMock, splitBasisPoints, platformID)
 		err := tu.Execute(ctx, cmd)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "save platform balance")
@@ -545,7 +549,7 @@ func TestTipTransferUsecase(t *testing.T) {
 		commitErr := errors.New("serialization failure")
 		uowMock.EXPECT().Commit(ctx).Return(commitErr).Once()
 
-		tu := usecase.NewTipTransferUsecase(uowfMock, cacheMock, bRepoReadOnlyMock, splitBasisPoints, platformID)
+		tu := newTipTransferUsecase(t, uowfMock, cacheMock, bRepoReadOnlyMock, splitBasisPoints, platformID)
 		err := tu.Execute(ctx, cmd)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "commit transaction: serialization failure")
@@ -584,9 +588,29 @@ func TestTipTransferUsecase(t *testing.T) {
 
 		cacheMock.EXPECT().InvalidateKey(ctx, senderID).Return(nil).Once()
 
-		tu := usecase.NewTipTransferUsecase(uowfMock, cacheMock, bRepoReadOnlyMock, splitBasisPoints, platformID)
+		// Creator and platform cache saves still execute
+		cacheMock.EXPECT().SaveBalance(ctx, mock.MatchedBy(func(b *domain.Balance) bool {
+			return b.UserID == creatorID
+		})).Return(nil).Once()
+
+		cacheMock.EXPECT().SaveBalance(ctx, mock.MatchedBy(func(b *domain.Balance) bool {
+			return b.UserID == platformID
+		})).Return(nil).Once()
+
+		tu := newTipTransferUsecase(t, uowfMock, cacheMock, bRepoReadOnlyMock, splitBasisPoints, platformID)
 		err := tu.Execute(ctx, cmd)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "cache sender balance: save cache for user sender-123")
+		assert.NoError(t, err)
 	})
+}
+
+func newTipTransferUsecase(t *testing.T, uowf repo.UnitOfWorkFactory, cache cache.Cache, bRepo repo.BalanceRepo, splitBasisPoints int64, platformID string) usecase.TipTransferUsecase {
+	nopMet := nopmetrics.NewNopMetrics()
+	mockLog := logMocks.NewMockLogger(t)
+	mockLog.EXPECT().ErrorCtx(mock.Anything, mock.Anything, mock.Anything).Maybe()
+	mockLog.EXPECT().ErrorCtx(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe()
+	mockLog.EXPECT().WarnCtx(mock.Anything, mock.Anything).Maybe()
+	mockLog.EXPECT().WarnCtx(mock.Anything, mock.Anything, mock.Anything).Maybe()
+	mockLog.EXPECT().InfoCtx(mock.Anything, mock.Anything).Maybe()
+	mockLog.EXPECT().InfoCtx(mock.Anything, mock.Anything, mock.Anything).Maybe()
+	return usecase.NewTipTransferUsecase(uowf, cache, bRepo, nopMet, mockLog, splitBasisPoints, platformID)
 }

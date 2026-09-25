@@ -7,6 +7,7 @@ import (
 
 	"github.com/st-ember/microtip/internal/adpt/driving/http/payment"
 	hashMocks "github.com/st-ember/microtip/internal/app/port/hash/mocks"
+	logMocks "github.com/st-ember/microtip/internal/app/port/log/mocks"
 	usecaseMocks "github.com/st-ember/microtip/internal/app/usecase/mocks"
 )
 
@@ -23,10 +24,12 @@ func TestNewPaymentHandler(t *testing.T) {
 		confirmMock := usecaseMocks.NewMockConfirmationUsecase(t)
 		statusMock := usecaseMocks.NewMockStatusCheckUsecase(t)
 		hasherMock := hashMocks.NewMockHasher(t)
+		mockLogger := logMocks.NewMockLogger(t)
 
 		handler := payment.NewPaymentHandler(
 			merchantID, tradeDesc, returnURL, clientBackURL, paymentURL,
 			checkoutMock, failMock, confirmMock, statusMock, hasherMock,
+			mockLogger,
 		)
 		assert.NotNil(t, handler)
 	})

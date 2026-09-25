@@ -2,6 +2,7 @@ package payment
 
 import (
 	"github.com/st-ember/microtip/internal/app/port/hash"
+	"github.com/st-ember/microtip/internal/app/port/log"
 	"github.com/st-ember/microtip/internal/app/usecase"
 )
 
@@ -16,6 +17,7 @@ type PaymentHandler struct {
 	confirmationUsecase usecase.ConfirmationUsecase
 	statusCheckUsecase  usecase.StatusCheckUsecase
 	hasher              hash.Hasher
+	logger              log.Logger
 }
 
 func NewPaymentHandler(
@@ -29,6 +31,7 @@ func NewPaymentHandler(
 	confirmationUsecase usecase.ConfirmationUsecase,
 	statusCheckUsecase usecase.StatusCheckUsecase,
 	hasher hash.Hasher,
+	logger log.Logger,
 ) *PaymentHandler {
 	return &PaymentHandler{
 		merchantID:          merchantID,
@@ -41,5 +44,6 @@ func NewPaymentHandler(
 		confirmationUsecase: confirmationUsecase,
 		statusCheckUsecase:  statusCheckUsecase,
 		hasher:              hasher,
+		logger:              logger,
 	}
 }

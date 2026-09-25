@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/st-ember/microtip/internal/adpt/driving/http/tip"
+	logMocks "github.com/st-ember/microtip/internal/app/port/log/mocks"
 	usecaseMocks "github.com/st-ember/microtip/internal/app/usecase/mocks"
 )
 
@@ -37,7 +38,7 @@ func TestTipTransferHandler(t *testing.T) {
 
 	t.Run("Success - valid payload executes successfully", func(t *testing.T) {
 		ucMock := usecaseMocks.NewMockTipTransferUsecase(t)
-		handler := tip.NewTipHandler(ucMock)
+		handler := tip.NewTipHandler(ucMock, newMockLogger(t))
 
 		// Setup route
 		r := gin.New()
@@ -64,7 +65,7 @@ func TestTipTransferHandler(t *testing.T) {
 
 	t.Run("Error - invalid JSON format", func(t *testing.T) {
 		ucMock := usecaseMocks.NewMockTipTransferUsecase(t)
-		handler := tip.NewTipHandler(ucMock)
+		handler := tip.NewTipHandler(ucMock, newMockLogger(t))
 
 		r := gin.New()
 		r.POST("/tip-transfer", handler.HandleTipTransfer)
@@ -82,7 +83,7 @@ func TestTipTransferHandler(t *testing.T) {
 
 	t.Run("Error - missing required field", func(t *testing.T) {
 		ucMock := usecaseMocks.NewMockTipTransferUsecase(t)
-		handler := tip.NewTipHandler(ucMock)
+		handler := tip.NewTipHandler(ucMock, newMockLogger(t))
 
 		r := gin.New()
 		r.POST("/tip-transfer", handler.HandleTipTransfer)
@@ -107,7 +108,7 @@ func TestTipTransferHandler(t *testing.T) {
 
 	t.Run("Error - domain rule validation failure (tip self)", func(t *testing.T) {
 		ucMock := usecaseMocks.NewMockTipTransferUsecase(t)
-		handler := tip.NewTipHandler(ucMock)
+		handler := tip.NewTipHandler(ucMock, newMockLogger(t))
 
 		r := gin.New()
 		r.POST("/tip-transfer", handler.HandleTipTransfer)
@@ -133,7 +134,7 @@ func TestTipTransferHandler(t *testing.T) {
 
 	t.Run("Error - usecase execution failure", func(t *testing.T) {
 		ucMock := usecaseMocks.NewMockTipTransferUsecase(t)
-		handler := tip.NewTipHandler(ucMock)
+		handler := tip.NewTipHandler(ucMock, newMockLogger(t))
 
 		r := gin.New()
 		r.POST("/tip-transfer", handler.HandleTipTransfer)
@@ -154,4 +155,15 @@ func TestTipTransferHandler(t *testing.T) {
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Contains(t, w.Body.String(), "internal error")
 	})
+}
+
+func newMockLogger(t *testing.T) *logMocks.MockLogger {
+	mockLogger := logMocks.NewMockLogger(t)
+	mockLogger.EXPECT().ErrorCtx(mock.Anything, mock.Anything, mock.Anything).Maybe()
+	mockLogger.EXPECT().ErrorCtx(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe()
+	mockLogger.EXPECT().WarnCtx(mock.Anything, mock.Anything).Maybe()
+	mockLogger.EXPECT().WarnCtx(mock.Anything, mock.Anything, mock.Anything).Maybe()
+	mockLogger.EXPECT().InfoCtx(mock.Anything, mock.Anything).Maybe()
+	mockLogger.EXPECT().InfoCtx(mock.Anything, mock.Anything, mock.Anything).Maybe()
+	return mockLogger
 }

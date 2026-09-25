@@ -4,10 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"github.com/st-ember/microtip/internal/app/port/cache"
+	"github.com/st-ember/microtip/internal/app/port/log"
+	"github.com/st-ember/microtip/internal/app/port/metrics"
 	"github.com/st-ember/microtip/internal/app/port/repo"
 	"github.com/st-ember/microtip/internal/domain"
 )
@@ -20,7 +23,9 @@ type tipTransferUsecase struct {
 	uowf  repo.UnitOfWorkFactory
 	cache cache.Cache
 	// Read only repo for retrieveBalance helper
-	bRepo repo.BalanceRepo
+	bRepo   repo.BalanceRepo
+	metrics metrics.Metrics
+	logger  log.Logger
 	// Represents the platform fee percentage
 	// Goes down to two points below decimal
 	// Example: 1525 = 15.25%
@@ -28,18 +33,31 @@ type tipTransferUsecase struct {
 	platformID       string
 }
 
-func NewTipTransferUsecase(uowf repo.UnitOfWorkFactory, cache cache.Cache, bRepo repo.BalanceRepo,
-	splitBasisPoints int64, platformID string) TipTransferUsecase {
-	return &tipTransferUsecase{uowf, cache, bRepo, splitBasisPoints, platformID}
+func NewTipTransferUsecase(
+	uowf repo.UnitOfWorkFactory, cache cache.Cache, bRepo repo.BalanceRepo,
+	metrics metrics.Metrics, logger log.Logger, splitBasisPoints int64, platformID string,
+) TipTransferUsecase {
+	return &tipTransferUsecase{uowf, cache, bRepo, metrics, logger, splitBasisPoints, platformID}
 }
 
 func (tu *tipTransferUsecase) Execute(ctx context.Context, cmd *domain.TipTransferCommand) error {
+	// Record tip transfer event start
+	tu.metrics.IncTip(metrics.TipStatusStarted)
+
+	// Init db duration start time
+	start := time.Now()
 	uow, err := tu.uowf.NewUnitOfWork(ctx)
 	if err != nil {
 		return fmt.Errorf("start unit of work: %w", err)
 	}
+	committed := false
 	defer func() {
-		_ = uow.Rollback(ctx)
+		if !committed {
+			tu.metrics.IncTip(metrics.TipStatusDBErr)
+		}
+		if err := uow.Rollback(ctx); err != nil {
+			tu.logger.ErrorCtx(ctx, "roll back transaction", err, "idempotency_key", cmd.IdempotencyKey)
+		}
 	}()
 
 	lRepo := uow.LedgerRepo()
@@ -52,6 +70,7 @@ func (tu *tipTransferUsecase) Execute(ctx context.Context, cmd *domain.TipTransf
 	}
 
 	if sb.CurrentBalance < cmd.Amount {
+		tu.metrics.IncTip(metrics.TipStatusBalanceErr)
 		return fmt.Errorf("insufficient balance for sender %s: have %d, need %d", cmd.SenderID, sb.CurrentBalance, cmd.Amount)
 	}
 
@@ -151,18 +170,33 @@ func (tu *tipTransferUsecase) Execute(ctx context.Context, cmd *domain.TipTransf
 	if err := uow.Commit(ctx); err != nil {
 		return fmt.Errorf("commit transaction: %w", err)
 	}
+	committed = true
+
+	// Record db duration
+	duration := time.Since(start)
+	tu.metrics.ObserveDBTransactionDuration("tip_transfer", duration)
+	tu.metrics.IncTip(metrics.TipStatusSuccess)
 
 	// Update cached balances
 	if err := tu.saveOrInvalidateCache(ctx, updatedSB); err != nil {
-		return fmt.Errorf("cache sender balance: %w", err)
+		tu.logger.ErrorCtx(
+			ctx, "cache sender balance", err,
+			"user_id", cmd.SenderID, "idempotency_key", cmd.IdempotencyKey,
+		)
 	}
 
 	if err := tu.saveOrInvalidateCache(ctx, updatedCB); err != nil {
-		return fmt.Errorf("cache creator balance: %w", err)
+		tu.logger.ErrorCtx(
+			ctx, "cache creator balance", err,
+			"user_id", cmd.CreatorID, "idempotency_key", cmd.IdempotencyKey,
+		)
 	}
 
 	if err := tu.saveOrInvalidateCache(ctx, updatedPB); err != nil {
-		return fmt.Errorf("cache platform balance: %w", err)
+		tu.logger.ErrorCtx(
+			ctx, "cache platform balance", err,
+			"user_id", tu.platformID, "idempotency_key", cmd.IdempotencyKey,
+		)
 	}
 
 	return nil
@@ -201,8 +235,9 @@ func (tu *tipTransferUsecase) splitTip(amount int64) (cShare, pShare int64) {
 
 func (tu *tipTransferUsecase) saveOrInvalidateCache(ctx context.Context, b *domain.Balance) error {
 	if err := tu.cache.SaveBalance(ctx, b); err != nil {
-		// TODO: log error
-		_ = tu.cache.InvalidateKey(ctx, b.UserID)
+		if err := tu.cache.InvalidateKey(ctx, b.UserID); err != nil {
+			tu.logger.WarnCtx(ctx, "invalidate balance", err, "user_id", b.UserID)
+		}
 
 		return fmt.Errorf("save cache for user %s: %w", b.UserID, err)
 	}

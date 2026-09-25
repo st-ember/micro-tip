@@ -9,8 +9,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
+	"github.com/st-ember/microtip/internal/app/port/cache"
 	cacheMocks "github.com/st-ember/microtip/internal/app/port/cache/mocks"
+	"github.com/st-ember/microtip/internal/app/port/hash"
 	hashMocks "github.com/st-ember/microtip/internal/app/port/hash/mocks"
+	logMocks "github.com/st-ember/microtip/internal/app/port/log/mocks"
+	"github.com/st-ember/microtip/internal/app/port/repo"
 	repoMocks "github.com/st-ember/microtip/internal/app/port/repo/mocks"
 	"github.com/st-ember/microtip/internal/app/usecase"
 	"github.com/st-ember/microtip/internal/domain"
@@ -101,7 +105,7 @@ func TestConfirmationUsecase_Execute(t *testing.T) {
 			Return(nil).
 			Once()
 
-		uc := usecase.NewConfirmationUsecase(uowfMock, cacheMock, hasherMock)
+		uc := newConfirmationUsecase(t, uowfMock, cacheMock, hasherMock)
 		err := uc.Execute(ctx, input)
 		assert.NoError(t, err)
 	})
@@ -151,7 +155,7 @@ func TestConfirmationUsecase_Execute(t *testing.T) {
 			Return(nil).
 			Once()
 
-		uc := usecase.NewConfirmationUsecase(uowfMock, cacheMock, hasherMock)
+		uc := newConfirmationUsecase(t, uowfMock, cacheMock, hasherMock)
 		err := uc.Execute(ctx, input)
 		assert.NoError(t, err)
 	})
@@ -167,7 +171,7 @@ func TestConfirmationUsecase_Execute(t *testing.T) {
 			Return(false, nil).
 			Once()
 
-		uc := usecase.NewConfirmationUsecase(uowfMock, cacheMock, hasherMock)
+		uc := newConfirmationUsecase(t, uowfMock, cacheMock, hasherMock)
 		err := uc.Execute(ctx, input)
 		assert.NoError(t, err)
 	})
@@ -191,7 +195,7 @@ func TestConfirmationUsecase_Execute(t *testing.T) {
 			Return(successOrder, nil).
 			Once()
 
-		uc := usecase.NewConfirmationUsecase(uowfMock, cacheMock, hasherMock)
+		uc := newConfirmationUsecase(t, uowfMock, cacheMock, hasherMock)
 		err := uc.Execute(ctx, input)
 		assert.NoError(t, err)
 	})
@@ -206,7 +210,7 @@ func TestConfirmationUsecase_Execute(t *testing.T) {
 			Return(false, errors.New("hashing service offline")).
 			Once()
 
-		uc := usecase.NewConfirmationUsecase(uowfMock, cacheMock, hasherMock)
+		uc := newConfirmationUsecase(t, uowfMock, cacheMock, hasherMock)
 		err := uc.Execute(ctx, input)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "validate check mac val:")
@@ -227,7 +231,7 @@ func TestConfirmationUsecase_Execute(t *testing.T) {
 			Return(nil, errors.New("redis connection refused")).
 			Once()
 
-		uc := usecase.NewConfirmationUsecase(uowfMock, cacheMock, hasherMock)
+		uc := newConfirmationUsecase(t, uowfMock, cacheMock, hasherMock)
 		err := uc.Execute(ctx, input)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "read order from cache:")
@@ -268,9 +272,20 @@ func TestConfirmationUsecase_Execute(t *testing.T) {
 			Return(nil).
 			Once()
 
-		uc := usecase.NewConfirmationUsecase(uowfMock, cacheMock, hasherMock)
+		uc := newConfirmationUsecase(t, uowfMock, cacheMock, hasherMock)
 		err := uc.Execute(ctx, input)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "cache balance:")
 	})
+}
+
+func newConfirmationUsecase(t *testing.T, uowf repo.UnitOfWorkFactory, cache cache.Cache, hasher hash.Hasher) usecase.ConfirmationUsecase {
+	mockLog := logMocks.NewMockLogger(t)
+	mockLog.EXPECT().ErrorCtx(mock.Anything, mock.Anything, mock.Anything).Maybe()
+	mockLog.EXPECT().ErrorCtx(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe()
+	mockLog.EXPECT().WarnCtx(mock.Anything, mock.Anything).Maybe()
+	mockLog.EXPECT().WarnCtx(mock.Anything, mock.Anything, mock.Anything).Maybe()
+	mockLog.EXPECT().InfoCtx(mock.Anything, mock.Anything).Maybe()
+	mockLog.EXPECT().InfoCtx(mock.Anything, mock.Anything, mock.Anything).Maybe()
+	return usecase.NewConfirmationUsecase(uowf, cache, hasher, mockLog)
 }

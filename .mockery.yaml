@@ -13,6 +13,9 @@ packages:
   github.com/st-ember/microtip/internal/app/port/hash:
     config:
       all: true
+  github.com/st-ember/microtip/internal/app/port/log:
+    config:
+      all: true
   github.com/st-ember/microtip/internal/app/usecase:
     config:
       all: true

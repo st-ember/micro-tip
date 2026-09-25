@@ -5,11 +5,11 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 
 	"github.com/google/uuid"
 	"github.com/st-ember/microtip/internal/app/port/cache"
 	"github.com/st-ember/microtip/internal/app/port/hash"
+	"github.com/st-ember/microtip/internal/app/port/log"
 	"github.com/st-ember/microtip/internal/app/port/repo"
 	"github.com/st-ember/microtip/internal/domain"
 )
@@ -22,10 +22,14 @@ type confirmationUsecase struct {
 	uowf   repo.UnitOfWorkFactory
 	cache  cache.Cache
 	hasher hash.Hasher
+	logger log.Logger
 }
 
-func NewConfirmationUsecase(uowf repo.UnitOfWorkFactory, cache cache.Cache, hasher hash.Hasher) ConfirmationUsecase {
-	return &confirmationUsecase{uowf, cache, hasher}
+func NewConfirmationUsecase(
+	uowf repo.UnitOfWorkFactory, cache cache.Cache,
+	hasher hash.Hasher, logger log.Logger,
+) ConfirmationUsecase {
+	return &confirmationUsecase{uowf, cache, hasher, logger}
 }
 
 func (tu *confirmationUsecase) Execute(ctx context.Context, input ConfirmationInput) error {
@@ -67,8 +71,7 @@ func (tu *confirmationUsecase) Execute(ctx context.Context, input ConfirmationIn
 	}
 	defer func() {
 		if err := uow.Rollback(ctx); err != nil {
-			// TODO: log error with slog
-			log.Print(err)
+			tu.logger.ErrorCtx(ctx, "roll back transaction", err, "merchant_trade_no", input.MerchantTradeNo)
 		}
 	}()
 
@@ -120,8 +123,9 @@ func (tu *confirmationUsecase) Execute(ctx context.Context, input ConfirmationIn
 	// Update cache
 	if err := tu.cache.SaveBalance(ctx, updatedB); err != nil {
 		// Clear cache on error to ensure correct balance is fetched
-		// TODO: log error
-		_ = tu.cache.InvalidateKey(ctx, o.UserID)
+		if err := tu.cache.InvalidateKey(ctx, o.UserID); err != nil {
+			tu.logger.ErrorCtx(ctx, "invalidate balance", err, "user_id", o.UserID)
+		}
 
 		return fmt.Errorf("cache balance: %w", err)
 	}

@@ -14,6 +14,7 @@ import (
 
 	"github.com/st-ember/microtip/internal/adpt/driving/http/payment"
 	hashMocks "github.com/st-ember/microtip/internal/app/port/hash/mocks"
+	logMocks "github.com/st-ember/microtip/internal/app/port/log/mocks"
 	"github.com/st-ember/microtip/internal/app/usecase"
 	usecaseMocks "github.com/st-ember/microtip/internal/app/usecase/mocks"
 )
@@ -52,6 +53,7 @@ func TestPaymentHandler_HandleCheckout(t *testing.T) {
 		handler := payment.NewPaymentHandler(
 			merchantID, tradeDesc, returnURL, clientBackURL, paymentURL,
 			checkoutMock, failMock, confirmMock, statusMock, hasherMock,
+			newMockLogger(t),
 		)
 
 		r := gin.New()
@@ -112,6 +114,7 @@ func TestPaymentHandler_HandleCheckout(t *testing.T) {
 		handler := payment.NewPaymentHandler(
 			merchantID, tradeDesc, returnURL, clientBackURL, paymentURL,
 			checkoutMock, failMock, confirmMock, statusMock, hasherMock,
+			newMockLogger(t),
 		)
 
 		r := gin.New()
@@ -137,6 +140,7 @@ func TestPaymentHandler_HandleCheckout(t *testing.T) {
 		handler := payment.NewPaymentHandler(
 			merchantID, tradeDesc, returnURL, clientBackURL, paymentURL,
 			checkoutMock, failMock, confirmMock, statusMock, hasherMock,
+			newMockLogger(t),
 		)
 
 		r := gin.New()
@@ -168,6 +172,7 @@ func TestPaymentHandler_HandleCheckout(t *testing.T) {
 		handler := payment.NewPaymentHandler(
 			merchantID, tradeDesc, returnURL, clientBackURL, paymentURL,
 			checkoutMock, failMock, confirmMock, statusMock, hasherMock,
+			newMockLogger(t),
 		)
 
 		r := gin.New()
@@ -196,4 +201,15 @@ func TestPaymentHandler_HandleCheckout(t *testing.T) {
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Contains(t, w.Body.String(), "failed to generate payment signature")
 	})
+}
+
+func newMockLogger(t *testing.T) *logMocks.MockLogger {
+	mockLogger := logMocks.NewMockLogger(t)
+	mockLogger.EXPECT().ErrorCtx(mock.Anything, mock.Anything, mock.Anything).Maybe()
+	mockLogger.EXPECT().ErrorCtx(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe()
+	mockLogger.EXPECT().WarnCtx(mock.Anything, mock.Anything).Maybe()
+	mockLogger.EXPECT().WarnCtx(mock.Anything, mock.Anything, mock.Anything).Maybe()
+	mockLogger.EXPECT().InfoCtx(mock.Anything, mock.Anything).Maybe()
+	mockLogger.EXPECT().InfoCtx(mock.Anything, mock.Anything, mock.Anything).Maybe()
+	return mockLogger
 }

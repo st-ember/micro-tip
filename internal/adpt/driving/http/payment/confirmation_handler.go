@@ -12,17 +12,21 @@ func (ph *PaymentHandler) HandleConfirmation(c *gin.Context) {
 
 	if err := c.ShouldBind(&form); err != nil {
 		// Inform ECPay of the anomaly.
+		ph.logger.ErrorCtx(c, "invalid json request", err, "handler", "confirmation")
 		c.String(http.StatusBadRequest, "0|Invalid Parameters")
 		return
 	}
 
 	// RtnCode 1 means transaction success.
 	if form.RtnCode != 1 {
-		// Execute usecase to invalidate cache
-		// TODO: log error
-		_ = ph.failTopupUC.Execute(c, form.MerchantTradeNo)
+		// Log failure
+		ph.logger.InfoCtx(c, "ecpay notified topup failed", "merchant_tradeno", form.MerchantTradeNo)
 
-		// TODO: log failed transaction
+		// Execute usecase to invalidate cache
+		if err := ph.failTopupUC.Execute(c.Request.Context(), form.MerchantTradeNo); err != nil {
+			ph.logger.ErrorCtx(c, "execute usecase", err, "handler", "confirmation", "usecase", "fail_topup")
+		}
+
 		// Return confirmation that ECPay did its job and could close this transaction.
 		c.String(http.StatusOK, "1|OK")
 		return
@@ -35,9 +39,14 @@ func (ph *PaymentHandler) HandleConfirmation(c *gin.Context) {
 		Amount:              int64(form.TradeAmt),
 	}
 
-	// TODO: Log critical and send alarm for manual audit.
 	// ECPay still did its job, so fall through to confirmation.
-	_ = ph.confirmationUsecase.Execute(c, input)
+	if err := ph.confirmationUsecase.Execute(c.Request.Context(), input); err != nil {
+		// Log critical and send alarm for manual audit.
+		ph.logger.CriticalCtx(
+			c, "execute usecase", err, "handler", "confirmation",
+			"usecase", "confirmation", "merchant_trade_no", form.MerchantTradeNo,
+		)
+	}
 
 	// Return confirmation to ECPay so we don't receive further notices about this transaction.
 	c.String(http.StatusOK, "1|OK")

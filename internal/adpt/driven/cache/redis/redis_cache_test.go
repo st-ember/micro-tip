@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	nopmetrics "github.com/st-ember/microtip/internal/adpt/driven/metrics/prometheus/nop"
 	"github.com/st-ember/microtip/internal/domain"
 )
 
@@ -22,13 +23,15 @@ func TestNewRedisCache(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("success", func(t *testing.T) {
-		cache, err := NewRedisCache(ctx, mr.Addr(), "", 0, 10, 10)
+		nopMet := nopmetrics.NewNopMetrics()
+		cache, err := NewRedisCache(ctx, nopMet, mr.Addr(), "", 0, 10, 10)
 		assert.NoError(t, err)
 		assert.NotNil(t, cache)
 	})
 
 	t.Run("connection error", func(t *testing.T) {
-		cache, err := NewRedisCache(ctx, "localhost:99999", "", 0, 10, 10)
+		nopMet := nopmetrics.NewNopMetrics()
+		cache, err := NewRedisCache(ctx, nopMet, "localhost:99999", "", 0, 10, 10)
 		assert.Error(t, err)
 		assert.Nil(t, cache)
 	})
@@ -42,9 +45,10 @@ func TestReadBalance(t *testing.T) {
 	ctx := context.Background()
 	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
 	cache := &RedisCache{
-		Client:     rdb,
-		balanceExp: 60,
-		orderExp:   60,
+		Client:        rdb,
+		metrics:       nopmetrics.NewNopMetrics(),
+		balanceExpSec: 60,
+		orderExpSec:   60,
 	}
 
 	t.Run("success", func(t *testing.T) {
@@ -95,9 +99,10 @@ func TestSaveBalance(t *testing.T) {
 	ctx := context.Background()
 	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
 	cache := &RedisCache{
-		Client:     rdb,
-		balanceExp: int(time.Minute),
-		orderExp:   int(time.Minute),
+		Client:        rdb,
+		metrics:       nopmetrics.NewNopMetrics(),
+		balanceExpSec: int(time.Minute),
+		orderExpSec:   int(time.Minute),
 	}
 
 	balance := &domain.Balance{
@@ -128,9 +133,10 @@ func TestReadOrder(t *testing.T) {
 	ctx := context.Background()
 	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
 	cache := &RedisCache{
-		Client:     rdb,
-		balanceExp: 60,
-		orderExp:   60,
+		Client:        rdb,
+		metrics:       nopmetrics.NewNopMetrics(),
+		balanceExpSec: 60,
+		orderExpSec:   60,
 	}
 
 	t.Run("success", func(t *testing.T) {
@@ -182,9 +188,10 @@ func TestSaveOrder(t *testing.T) {
 	ctx := context.Background()
 	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
 	cache := &RedisCache{
-		Client:     rdb,
-		balanceExp: int(time.Minute),
-		orderExp:   int(time.Minute),
+		Client:        rdb,
+		metrics:       nopmetrics.NewNopMetrics(),
+		balanceExpSec: int(time.Minute),
+		orderExpSec:   int(time.Minute),
 	}
 
 	order := &domain.Order{
@@ -216,9 +223,10 @@ func TestInvalidateKey(t *testing.T) {
 	ctx := context.Background()
 	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
 	cache := &RedisCache{
-		Client:     rdb,
-		balanceExp: 60,
-		orderExp:   60,
+		Client:        rdb,
+		metrics:       nopmetrics.NewNopMetrics(),
+		balanceExpSec: 60,
+		orderExpSec:   60,
 	}
 
 	key := "test-key"

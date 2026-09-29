@@ -29,7 +29,7 @@ func TestSaveLedgerEntry(t *testing.T) {
 		assert.NoError(t, err)
 
 		var amount int64
-		err = tx.QueryRowContext(ctx, "SELECT amount FROM ledger_entry WHERE id = $1", entry.ID).Scan(&amount)
+		err = tx.QueryRowContext(ctx, "SELECT amount FROM ledger_entries WHERE id = $1", entry.ID).Scan(&amount)
 		assert.NoError(t, err)
 		assert.Equal(t, int64(200), amount)
 	})

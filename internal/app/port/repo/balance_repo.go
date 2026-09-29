@@ -9,4 +9,5 @@ import (
 type BalanceRepo interface {
 	GetBalance(ctx context.Context, userID string) (*domain.Balance, error)
 	SaveBalance(ctx context.Context, balance *domain.Balance) error
+	SeedInitialBalances(ctx context.Context, initialAmount int64, prefix string) error
 }

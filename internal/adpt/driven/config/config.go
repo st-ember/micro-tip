@@ -1,6 +1,7 @@
 package config
 
 import (
+	"log/slog"
 	"os"
 	"strconv"
 	"strings"
@@ -24,6 +25,7 @@ type Config struct {
 	ECPayClientBackURL string
 	ECPayPaymentURL    string
 	Port               string
+	LogLevel           slog.Level
 }
 
 func LoadConfig() *Config {
@@ -52,6 +54,7 @@ func LoadConfig() *Config {
 		ECPayClientBackURL: getEnv("ECPAY_CLIENT_BACK_URL", "http://localhost:8080/payment/status"),
 		ECPayPaymentURL:    getEnv("ECPAY_PAYMENT_URL", "https://payment-stage.ecpay.com.tw/Cashier/AioCheckOut/V5"),
 		Port:               port,
+		LogLevel:           getSlogLevel(),
 	}
 }
 
@@ -77,4 +80,20 @@ func getEnvInt64(key string, fallback int64) int64 {
 		return value
 	}
 	return fallback
+}
+
+func getSlogLevel() (programLevel slog.Level) {
+	levelStr := os.Getenv("LOG_LEVEL")
+	switch strings.ToUpper(levelStr) {
+	case "DEBUG":
+		programLevel = slog.LevelDebug
+	case "WARN":
+		programLevel = slog.LevelWarn
+	case "ERROR":
+		programLevel = slog.LevelError
+	default:
+		programLevel = slog.LevelInfo
+	}
+
+	return programLevel
 }

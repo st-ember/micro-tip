@@ -162,3 +162,66 @@ func (_c *MockBalanceRepo_SaveBalance_Call) RunAndReturn(run func(ctx context.Co
 	_c.Call.Return(run)
 	return _c
 }
+
+// SeedInitialBalances provides a mock function for the type MockBalanceRepo
+func (_mock *MockBalanceRepo) SeedInitialBalances(ctx context.Context, initialAmount int64, prefix string) error {
+	ret := _mock.Called(ctx, initialAmount, prefix)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SeedInitialBalances")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int64, string) error); ok {
+		r0 = returnFunc(ctx, initialAmount, prefix)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockBalanceRepo_SeedInitialBalances_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SeedInitialBalances'
+type MockBalanceRepo_SeedInitialBalances_Call struct {
+	*mock.Call
+}
+
+// SeedInitialBalances is a helper method to define mock.On call
+//   - ctx context.Context
+//   - initialAmount int64
+//   - prefix string
+func (_e *MockBalanceRepo_Expecter) SeedInitialBalances(ctx interface{}, initialAmount interface{}, prefix interface{}) *MockBalanceRepo_SeedInitialBalances_Call {
+	return &MockBalanceRepo_SeedInitialBalances_Call{Call: _e.mock.On("SeedInitialBalances", ctx, initialAmount, prefix)}
+}
+
+func (_c *MockBalanceRepo_SeedInitialBalances_Call) Run(run func(ctx context.Context, initialAmount int64, prefix string)) *MockBalanceRepo_SeedInitialBalances_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int64
+		if args[1] != nil {
+			arg1 = args[1].(int64)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockBalanceRepo_SeedInitialBalances_Call) Return(err error) *MockBalanceRepo_SeedInitialBalances_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockBalanceRepo_SeedInitialBalances_Call) RunAndReturn(run func(ctx context.Context, initialAmount int64, prefix string) error) *MockBalanceRepo_SeedInitialBalances_Call {
+	_c.Call.Return(run)
+	return _c
+}

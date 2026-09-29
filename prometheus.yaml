@@ -1,0 +1,8 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: "microtip"
+    static_configs:
+      # Replace 'microtip' with whatever your service name is in docker-compose.yml
+      - targets: ["microtip:8085"]

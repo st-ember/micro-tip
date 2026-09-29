@@ -53,7 +53,7 @@ func (c *RedisCache) ReadBalance(ctx context.Context, key string) (*domain.Balan
 	val, err := c.Client.Get(ctx, key).Result()
 	if errors.Is(err, redis.Nil) {
 		c.metrics.IncCacheRead("balance", "miss")
-		return nil, fmt.Errorf("key %s does not exist", key)
+		return nil, fmt.Errorf("%w: key %s does not exist", err, key)
 	} else if err != nil {
 		c.metrics.IncCacheRead("balance", "error")
 		return nil, fmt.Errorf("key %s: %w", key, err)

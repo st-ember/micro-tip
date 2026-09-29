@@ -1,6 +1,7 @@
 package config
 
 import (
+	"log/slog"
 	"os"
 	"testing"
 	"time"
@@ -73,6 +74,9 @@ func TestLoadConfig_Defaults(t *testing.T) {
 	if cfg.Port != ":8080" {
 		t.Errorf("expected default Port, got %s", cfg.Port)
 	}
+	if cfg.LogLevel != slog.LevelInfo {
+		t.Errorf("expected default LogLevel, got %s", cfg.LogLevel)
+	}
 }
 
 func TestLoadConfig_EnvOverrides(t *testing.T) {
@@ -92,6 +96,7 @@ func TestLoadConfig_EnvOverrides(t *testing.T) {
 	t.Setenv("ECPAY_CLIENT_BACK_URL", "http://test/back")
 	t.Setenv("ECPAY_PAYMENT_URL", "https://test/pay")
 	t.Setenv("PORT", "9090")
+	t.Setenv("LOG_LEVEL", "ERROR")
 
 	cfg := LoadConfig()
 
@@ -142,6 +147,9 @@ func TestLoadConfig_EnvOverrides(t *testing.T) {
 	}
 	if cfg.Port != ":9090" {
 		t.Errorf("expected overridden Port with colon prepended, got %s", cfg.Port)
+	}
+	if cfg.LogLevel != slog.LevelError {
+		t.Errorf("expected overridden LogLevel, got %s", cfg.LogLevel)
 	}
 }
 

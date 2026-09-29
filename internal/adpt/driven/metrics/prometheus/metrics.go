@@ -1,9 +1,11 @@
 package prometheusmetrics
 
 import (
+	"database/sql"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/st-ember/microtip/internal/app/port/metrics"
 )
@@ -17,9 +19,17 @@ type PrometheusMetrics struct {
 	cacheDuration       *prometheus.HistogramVec
 }
 
-func NewPrometheusMetrics() metrics.Metrics {
+func NewPrometheusMetrics(reg *prometheus.Registry, db *sql.DB) metrics.Metrics {
+	// Register standard DB stats to custom registry
+	dbStatsCollector := collectors.NewDBStatsCollector(db, "microtip")
+	reg.MustRegister(dbStatsCollector)
+
+	// Create a factory tied to custom registry
+	factory := promauto.With(reg)
+
 	return &PrometheusMetrics{
-		httpRequestTotal: promauto.NewCounterVec(
+		// 3. Use factory instead of promauto directly
+		httpRequestTotal: factory.NewCounterVec(
 			prometheus.CounterOpts{
 				Namespace: "micro_tip",
 				Subsystem: "http",
@@ -28,7 +38,7 @@ func NewPrometheusMetrics() metrics.Metrics {
 			},
 			[]string{"method", "path", "status"},
 		),
-		httpRequestDuration: promauto.NewHistogramVec(
+		httpRequestDuration: factory.NewHistogramVec(
 			prometheus.HistogramOpts{
 				Namespace: "micro_tip",
 				Subsystem: "http",
@@ -37,7 +47,7 @@ func NewPrometheusMetrics() metrics.Metrics {
 			},
 			[]string{"method", "path"},
 		),
-		tipsTotal: promauto.NewCounterVec(
+		tipsTotal: factory.NewCounterVec(
 			prometheus.CounterOpts{
 				Namespace: "micro_tip",
 				Subsystem: "http",
@@ -46,7 +56,7 @@ func NewPrometheusMetrics() metrics.Metrics {
 			},
 			[]string{"status"},
 		),
-		dbTxDuration: promauto.NewHistogramVec(
+		dbTxDuration: factory.NewHistogramVec(
 			prometheus.HistogramOpts{
 				Namespace: "micro_tip",
 				Subsystem: "http",
@@ -55,7 +65,7 @@ func NewPrometheusMetrics() metrics.Metrics {
 			},
 			[]string{"operation"},
 		),
-		cacheReadTotal: promauto.NewCounterVec(
+		cacheReadTotal: factory.NewCounterVec(
 			prometheus.CounterOpts{
 				Namespace: "micro_tip",
 				Subsystem: "cache",
@@ -64,7 +74,7 @@ func NewPrometheusMetrics() metrics.Metrics {
 			},
 			[]string{"cache_name", "status"},
 		),
-		cacheDuration: promauto.NewHistogramVec(
+		cacheDuration: factory.NewHistogramVec(
 			prometheus.HistogramOpts{
 				Namespace: "micro_tip",
 				Subsystem: "cache",

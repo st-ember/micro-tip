@@ -43,7 +43,7 @@ func TestMain(m *testing.M) {
             created_at TIMESTAMPTZ,
             updated_at TIMESTAMPTZ
         );
-        CREATE TABLE IF NOT EXISTS ledger_entry (
+        CREATE TABLE IF NOT EXISTS ledger_entries (
             id TEXT PRIMARY KEY,
             user_id TEXT,
             idempotency_key TEXT,
@@ -75,7 +75,7 @@ func beginTx(t *testing.T) *sql.Tx {
 	tx, err := TestDB.BeginTx(t.Context(), nil)
 	require.NoError(t, err)
 
-	_, err = tx.ExecContext(t.Context(), "TRUNCATE balance, ledger_entry RESTART IDENTITY CASCADE;")
+	_, err = tx.ExecContext(t.Context(), "TRUNCATE balance, ledger_entries RESTART IDENTITY CASCADE;")
 	require.NoError(t, err)
 
 	t.Cleanup(func() {

@@ -19,7 +19,7 @@ func NewPostgresLedgerRepoWithTransaction(tx *sql.Tx) repo.LedgerRepo {
 
 func (lr *PostgresLedgerRepo) SaveLedgerEntry(ctx context.Context, entry *domain.LedgerEntry) error {
 	query := `
-		INSERT INTO ledger_entry (id, user_id, idempotency_key, transaction_id, amount, type, created_at)
+		INSERT INTO ledger_entries (id, user_id, idempotency_key, transaction_id, amount, type, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		ON CONFLICT (id) DO NOTHING
 	`

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/st-ember/microtip/internal/adpt/driven/cache/redis"
 	"github.com/st-ember/microtip/internal/adpt/driven/config"
 	"github.com/st-ember/microtip/internal/adpt/driven/hash/ecpay"
@@ -34,9 +35,19 @@ func main() {
 		_ = db.Conn.Close()
 	}()
 
-	// Initialize metrics and logger
-	logger := slogger.NewSlogger(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
-	metrics := prometheusmetrics.NewPrometheusMetrics()
+	// Seed initial balances for spike testing
+	bRepo := postgres.NewPostgresBalanceRepo(db.Conn)
+	if err := bRepo.SeedInitialBalances(dbCtx, 1000000000, "sender"); err != nil {
+		log.Fatalf("Failed to seed initial balances: %v", err)
+	}
+
+	// Logger with config level
+	jsonHandler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: cfg.LogLevel})
+	logger := slogger.NewSlogger(slog.New(jsonHandler))
+
+	// Metrics with custom registry
+	reg := prometheus.NewRegistry()
+	metrics := prometheusmetrics.NewPrometheusMetrics(reg, db.Conn)
 
 	// Redis Cache Connection
 	redisCtx, redisCancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -83,6 +94,7 @@ func main() {
 		hasher,
 		logger,
 		metrics,
+		reg,
 		cfg.ECPayMerchantID,
 		cfg.ECPayTradeDesc,
 		cfg.ECPayReturnURL,

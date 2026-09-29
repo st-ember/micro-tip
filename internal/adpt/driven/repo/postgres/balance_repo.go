@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/st-ember/microtip/internal/app/port/repo"
 	"github.com/st-ember/microtip/internal/domain"
@@ -62,6 +63,51 @@ func (br *PostgresBalanceRepo) SaveBalance(ctx context.Context, balance *domain.
 	_, err := br.q.ExecContext(ctx, query, balance.UserID, balance.CurrentBalance, balance.CreatedAt, balance.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("save balance: %w", err)
+	}
+
+	return nil
+}
+
+// SeedInitialBalances populates test accounts with an initial balance for testing
+func (br *PostgresBalanceRepo) SeedInitialBalances(ctx context.Context, initialAmount int64, prefix string) error {
+	now := time.Now()
+	for i := range 100 {
+		userID := fmt.Sprintf("%s_%d", prefix, i)
+		balance := &domain.Balance{
+			UserID:         userID,
+			CurrentBalance: initialAmount,
+			CreatedAt:      now,
+			UpdatedAt:      now,
+		}
+
+		if err := br.SaveBalance(ctx, balance); err != nil {
+			return fmt.Errorf("failed to seed balance for %s: %w", userID, err)
+		}
+	}
+
+	for i := range 50 {
+		userID := fmt.Sprintf("creator_%d", i)
+		balance := &domain.Balance{
+			UserID:         userID,
+			CurrentBalance: initialAmount,
+			CreatedAt:      now,
+			UpdatedAt:      now,
+		}
+
+		if err := br.SaveBalance(ctx, balance); err != nil {
+			return fmt.Errorf("failed to seed balance for %s: %w", userID, err)
+		}
+	}
+
+	balance := &domain.Balance{
+		UserID:         "platform-789",
+		CurrentBalance: initialAmount,
+		CreatedAt:      now,
+		UpdatedAt:      now,
+	}
+
+	if err := br.SaveBalance(ctx, balance); err != nil {
+		return fmt.Errorf("failed to seed balance for %s: %w", "platform-789", err)
 	}
 
 	return nil

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
 	_ "github.com/lib/pq"
 )
@@ -19,8 +20,15 @@ func NewDB(ctx context.Context, dbURL string) (*DB, error) {
 	}
 
 	if err := conn.PingContext(ctx); err != nil {
+		_ = conn.Close()
 		return nil, fmt.Errorf("ping postgres database: %w", err)
 	}
+
+	// Optimize connection pool limits for high concurrency and spike tests
+	conn.SetMaxOpenConns(50)                  // Cap maximum open connections to prevent DB exhaustion
+	conn.SetMaxIdleConns(25)                  // Keep warm idle connections to eliminate connection churn
+	conn.SetConnMaxLifetime(10 * time.Minute) // Retire old connections safely
+	conn.SetConnMaxIdleTime(5 * time.Minute)  // Clean up idle connections to free DB resources
 
 	return &DB{conn}, nil
 }

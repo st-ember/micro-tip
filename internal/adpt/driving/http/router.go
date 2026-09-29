@@ -2,6 +2,7 @@ package http
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/st-ember/microtip/internal/adpt/driving/http/middleware"
 	"github.com/st-ember/microtip/internal/adpt/driving/http/payment"
@@ -25,6 +26,7 @@ func NewRouter(
 	hasher hash.Hasher,
 	logger log.Logger,
 	metrics metrics.Metrics,
+	registry *prometheus.Registry,
 	merchantID string,
 	tradeDesc string,
 	returnURL string,
@@ -63,7 +65,8 @@ func NewRouter(
 	router.GET("/payment/status/:merchant_trade_no", ph.HandleOrderStatus)
 
 	// expose metrics for scraping
-	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
+	promH := promhttp.HandlerFor(registry, promhttp.HandlerOpts{})
+	router.GET("/metrics", gin.WrapH(promH))
 
 	return &Router{
 		Engine: router,

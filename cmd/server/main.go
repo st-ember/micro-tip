@@ -5,6 +5,8 @@ import (
 	"log"
 	"log/slog"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	_ "github.com/lib/pq"
@@ -16,6 +18,7 @@ import (
 	prometheusmetrics "github.com/st-ember/microtip/internal/adpt/driven/metrics/prometheus"
 	"github.com/st-ember/microtip/internal/adpt/driven/repo/postgres"
 	drivingHttp "github.com/st-ember/microtip/internal/adpt/driving/http"
+	syncplatformbalance "github.com/st-ember/microtip/internal/adpt/driving/worker/sync_platform_balance"
 	"github.com/st-ember/microtip/internal/app/usecase"
 )
 
@@ -83,6 +86,21 @@ func main() {
 	failTopupUC := usecase.NewFailTopupUsecase(redisCache)
 	confirmationUC := usecase.NewConfirmationUsecase(uowFactory, redisCache, hasher, logger)
 	statusCheckUC := usecase.NewStatusCheckUsecase(redisCache)
+
+	// Long running context
+	workerCtx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+
+	// Worker Initialization
+	sw, err := syncplatformbalance.NewSyncPlatformBalanceWorker(
+		logger, uowFactory,
+		cfg.SyncPlatformBalanceIntervalSec, cfg.PlatformID,
+	)
+	if err != nil {
+		log.Fatalf("Worker run failed: %v", err)
+	}
+
+	go sw.Start(workerCtx)
 
 	// Router Initialization
 	router := drivingHttp.NewRouter(

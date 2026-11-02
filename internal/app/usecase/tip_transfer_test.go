@@ -49,12 +49,10 @@ func TestTipTransferUsecase(t *testing.T) {
 		// Create mock balances
 		senderBal := domain.NewBalance(senderID, 1000)
 		creatorBal := domain.NewBalance(creatorID, 500)
-		platformBal := domain.NewBalance(platformID, 100)
 
 		// Set up retrieve balance cache hit expectations
 		cacheMock.EXPECT().ReadBalance(ctx, senderID).Return(senderBal, nil).Once()
 		cacheMock.EXPECT().ReadBalance(ctx, creatorID).Return(creatorBal, nil).Once()
-		cacheMock.EXPECT().ReadBalance(ctx, platformID).Return(platformBal, nil).Once()
 
 		// Unit of work expectations
 		uowfMock.EXPECT().NewUnitOfWork(ctx).Return(uowMock, nil).Once()
@@ -84,10 +82,6 @@ func TestTipTransferUsecase(t *testing.T) {
 			return b.UserID == creatorID && b.CurrentBalance == 585
 		})).Return(nil).Once()
 
-		bRepoMock.EXPECT().SaveBalance(ctx, mock.MatchedBy(func(b *domain.Balance) bool {
-			return b.UserID == platformID && b.CurrentBalance == 115
-		})).Return(nil).Once()
-
 		// Commit expectation
 		uowMock.EXPECT().Commit(ctx).Return(nil).Once()
 
@@ -98,10 +92,6 @@ func TestTipTransferUsecase(t *testing.T) {
 
 		cacheMock.EXPECT().SaveBalance(ctx, mock.MatchedBy(func(b *domain.Balance) bool {
 			return b.UserID == creatorID && b.CurrentBalance == 585
-		})).Return(nil).Once()
-
-		cacheMock.EXPECT().SaveBalance(ctx, mock.MatchedBy(func(b *domain.Balance) bool {
-			return b.UserID == platformID && b.CurrentBalance == 115
 		})).Return(nil).Once()
 
 		// Execute
@@ -120,7 +110,6 @@ func TestTipTransferUsecase(t *testing.T) {
 
 		senderBal := domain.NewBalance(senderID, 1000)
 		creatorBal := domain.NewBalance(creatorID, 500)
-		platformBal := domain.NewBalance(platformID, 100)
 
 		// Cache misses
 		cacheMock.EXPECT().ReadBalance(ctx, senderID).Return(nil, redis.Nil).Once()
@@ -128,9 +117,6 @@ func TestTipTransferUsecase(t *testing.T) {
 
 		cacheMock.EXPECT().ReadBalance(ctx, creatorID).Return(nil, redis.Nil).Once()
 		bRepoReadOnlyMock.EXPECT().GetBalance(ctx, creatorID).Return(creatorBal, nil).Once()
-
-		cacheMock.EXPECT().ReadBalance(ctx, platformID).Return(nil, nil).Once() // testing nil, nil cache miss too
-		bRepoReadOnlyMock.EXPECT().GetBalance(ctx, platformID).Return(platformBal, nil).Once()
 
 		// Unit of work
 		uowfMock.EXPECT().NewUnitOfWork(ctx).Return(uowMock, nil).Once()
@@ -142,13 +128,13 @@ func TestTipTransferUsecase(t *testing.T) {
 		lRepoMock.EXPECT().SaveLedgerEntry(ctx, mock.Anything).Return(nil).Times(3)
 
 		// Balance save
-		bRepoMock.EXPECT().SaveBalance(ctx, mock.Anything).Return(nil).Times(3)
+		bRepoMock.EXPECT().SaveBalance(ctx, mock.Anything).Return(nil).Times(2)
 
 		// Commit
 		uowMock.EXPECT().Commit(ctx).Return(nil).Once()
 
 		// Cache save
-		cacheMock.EXPECT().SaveBalance(ctx, mock.Anything).Return(nil).Times(3)
+		cacheMock.EXPECT().SaveBalance(ctx, mock.Anything).Return(nil).Times(2)
 
 		tu := newTipTransferUsecase(t, uowfMock, cacheMock, bRepoReadOnlyMock, splitBasisPoints, platformID)
 		err := tu.Execute(ctx, cmd)
@@ -272,34 +258,6 @@ func TestTipTransferUsecase(t *testing.T) {
 		assert.Contains(t, err.Error(), "retrieve creator balance: get balance from db for user creator-456")
 	})
 
-	t.Run("Error - retrieve platform balance fails due to DB error", func(t *testing.T) {
-		uowMock := repoMocks.NewMockUnitOfWork(t)
-		uowfMock := repoMocks.NewMockUnitOfWorkFactory(t)
-		cacheMock := cacheMocks.NewMockCache(t)
-		bRepoReadOnlyMock := repoMocks.NewMockBalanceRepo(t)
-		bRepoMock := repoMocks.NewMockBalanceRepo(t)
-		lRepoMock := repoMocks.NewMockLedgerRepo(t)
-
-		senderBal := domain.NewBalance(senderID, 1000)
-		creatorBal := domain.NewBalance(creatorID, 500)
-
-		cacheMock.EXPECT().ReadBalance(ctx, senderID).Return(senderBal, nil).Once()
-		cacheMock.EXPECT().ReadBalance(ctx, creatorID).Return(creatorBal, nil).Once()
-		cacheMock.EXPECT().ReadBalance(ctx, platformID).Return(nil, redis.Nil).Once()
-		dbErr := errors.New("platform db error")
-		bRepoReadOnlyMock.EXPECT().GetBalance(ctx, platformID).Return(nil, dbErr).Once()
-
-		uowfMock.EXPECT().NewUnitOfWork(ctx).Return(uowMock, nil).Once()
-		uowMock.EXPECT().LedgerRepo().Return(lRepoMock).Once()
-		uowMock.EXPECT().BalanceRepo().Return(bRepoMock).Once()
-		uowMock.EXPECT().Rollback(ctx).Return(nil).Once()
-
-		tu := newTipTransferUsecase(t, uowfMock, cacheMock, bRepoReadOnlyMock, splitBasisPoints, platformID)
-		err := tu.Execute(ctx, cmd)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "retrieve platform balance: get balance from db for user platform-789")
-	})
-
 	t.Run("Error - save sender ledger entry fails", func(t *testing.T) {
 		uowMock := repoMocks.NewMockUnitOfWork(t)
 		uowfMock := repoMocks.NewMockUnitOfWorkFactory(t)
@@ -310,11 +268,9 @@ func TestTipTransferUsecase(t *testing.T) {
 
 		senderBal := domain.NewBalance(senderID, 1000)
 		creatorBal := domain.NewBalance(creatorID, 500)
-		platformBal := domain.NewBalance(platformID, 100)
 
 		cacheMock.EXPECT().ReadBalance(ctx, senderID).Return(senderBal, nil).Once()
 		cacheMock.EXPECT().ReadBalance(ctx, creatorID).Return(creatorBal, nil).Once()
-		cacheMock.EXPECT().ReadBalance(ctx, platformID).Return(platformBal, nil).Once()
 
 		uowfMock.EXPECT().NewUnitOfWork(ctx).Return(uowMock, nil).Once()
 		uowMock.EXPECT().LedgerRepo().Return(lRepoMock).Once()
@@ -342,11 +298,9 @@ func TestTipTransferUsecase(t *testing.T) {
 
 		senderBal := domain.NewBalance(senderID, 1000)
 		creatorBal := domain.NewBalance(creatorID, 500)
-		platformBal := domain.NewBalance(platformID, 100)
 
 		cacheMock.EXPECT().ReadBalance(ctx, senderID).Return(senderBal, nil).Once()
 		cacheMock.EXPECT().ReadBalance(ctx, creatorID).Return(creatorBal, nil).Once()
-		cacheMock.EXPECT().ReadBalance(ctx, platformID).Return(platformBal, nil).Once()
 
 		uowfMock.EXPECT().NewUnitOfWork(ctx).Return(uowMock, nil).Once()
 		uowMock.EXPECT().LedgerRepo().Return(lRepoMock).Once()
@@ -378,11 +332,9 @@ func TestTipTransferUsecase(t *testing.T) {
 
 		senderBal := domain.NewBalance(senderID, 1000)
 		creatorBal := domain.NewBalance(creatorID, 500)
-		platformBal := domain.NewBalance(platformID, 100)
 
 		cacheMock.EXPECT().ReadBalance(ctx, senderID).Return(senderBal, nil).Once()
 		cacheMock.EXPECT().ReadBalance(ctx, creatorID).Return(creatorBal, nil).Once()
-		cacheMock.EXPECT().ReadBalance(ctx, platformID).Return(platformBal, nil).Once()
 
 		uowfMock.EXPECT().NewUnitOfWork(ctx).Return(uowMock, nil).Once()
 		uowMock.EXPECT().LedgerRepo().Return(lRepoMock).Once()
@@ -418,11 +370,9 @@ func TestTipTransferUsecase(t *testing.T) {
 
 		senderBal := domain.NewBalance(senderID, 1000)
 		creatorBal := domain.NewBalance(creatorID, 500)
-		platformBal := domain.NewBalance(platformID, 100)
 
 		cacheMock.EXPECT().ReadBalance(ctx, senderID).Return(senderBal, nil).Once()
 		cacheMock.EXPECT().ReadBalance(ctx, creatorID).Return(creatorBal, nil).Once()
-		cacheMock.EXPECT().ReadBalance(ctx, platformID).Return(platformBal, nil).Once()
 
 		uowfMock.EXPECT().NewUnitOfWork(ctx).Return(uowMock, nil).Once()
 		uowMock.EXPECT().LedgerRepo().Return(lRepoMock).Once()
@@ -452,11 +402,9 @@ func TestTipTransferUsecase(t *testing.T) {
 
 		senderBal := domain.NewBalance(senderID, 1000)
 		creatorBal := domain.NewBalance(creatorID, 500)
-		platformBal := domain.NewBalance(platformID, 100)
 
 		cacheMock.EXPECT().ReadBalance(ctx, senderID).Return(senderBal, nil).Once()
 		cacheMock.EXPECT().ReadBalance(ctx, creatorID).Return(creatorBal, nil).Once()
-		cacheMock.EXPECT().ReadBalance(ctx, platformID).Return(platformBal, nil).Once()
 
 		uowfMock.EXPECT().NewUnitOfWork(ctx).Return(uowMock, nil).Once()
 		uowMock.EXPECT().LedgerRepo().Return(lRepoMock).Once()
@@ -480,48 +428,6 @@ func TestTipTransferUsecase(t *testing.T) {
 		assert.Contains(t, err.Error(), "save creator balance")
 	})
 
-	t.Run("Error - save platform balance fails", func(t *testing.T) {
-		uowMock := repoMocks.NewMockUnitOfWork(t)
-		uowfMock := repoMocks.NewMockUnitOfWorkFactory(t)
-		cacheMock := cacheMocks.NewMockCache(t)
-		bRepoReadOnlyMock := repoMocks.NewMockBalanceRepo(t)
-		bRepoMock := repoMocks.NewMockBalanceRepo(t)
-		lRepoMock := repoMocks.NewMockLedgerRepo(t)
-
-		senderBal := domain.NewBalance(senderID, 1000)
-		creatorBal := domain.NewBalance(creatorID, 500)
-		platformBal := domain.NewBalance(platformID, 100)
-
-		cacheMock.EXPECT().ReadBalance(ctx, senderID).Return(senderBal, nil).Once()
-		cacheMock.EXPECT().ReadBalance(ctx, creatorID).Return(creatorBal, nil).Once()
-		cacheMock.EXPECT().ReadBalance(ctx, platformID).Return(platformBal, nil).Once()
-
-		uowfMock.EXPECT().NewUnitOfWork(ctx).Return(uowMock, nil).Once()
-		uowMock.EXPECT().LedgerRepo().Return(lRepoMock).Once()
-		uowMock.EXPECT().BalanceRepo().Return(bRepoMock).Once()
-		uowMock.EXPECT().Rollback(ctx).Return(nil).Once()
-
-		lRepoMock.EXPECT().SaveLedgerEntry(ctx, mock.Anything).Return(nil).Times(3)
-
-		bRepoMock.EXPECT().SaveBalance(ctx, mock.MatchedBy(func(b *domain.Balance) bool {
-			return b.UserID == senderID
-		})).Return(nil).Once()
-
-		bRepoMock.EXPECT().SaveBalance(ctx, mock.MatchedBy(func(b *domain.Balance) bool {
-			return b.UserID == creatorID
-		})).Return(nil).Once()
-
-		dbErr := errors.New("platform balance save error")
-		bRepoMock.EXPECT().SaveBalance(ctx, mock.MatchedBy(func(b *domain.Balance) bool {
-			return b.UserID == platformID
-		})).Return(dbErr).Once()
-
-		tu := newTipTransferUsecase(t, uowfMock, cacheMock, bRepoReadOnlyMock, splitBasisPoints, platformID)
-		err := tu.Execute(ctx, cmd)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "save platform balance")
-	})
-
 	t.Run("Error - commit transaction fails", func(t *testing.T) {
 		uowMock := repoMocks.NewMockUnitOfWork(t)
 		uowfMock := repoMocks.NewMockUnitOfWorkFactory(t)
@@ -532,11 +438,9 @@ func TestTipTransferUsecase(t *testing.T) {
 
 		senderBal := domain.NewBalance(senderID, 1000)
 		creatorBal := domain.NewBalance(creatorID, 500)
-		platformBal := domain.NewBalance(platformID, 100)
 
 		cacheMock.EXPECT().ReadBalance(ctx, senderID).Return(senderBal, nil).Once()
 		cacheMock.EXPECT().ReadBalance(ctx, creatorID).Return(creatorBal, nil).Once()
-		cacheMock.EXPECT().ReadBalance(ctx, platformID).Return(platformBal, nil).Once()
 
 		uowfMock.EXPECT().NewUnitOfWork(ctx).Return(uowMock, nil).Once()
 		uowMock.EXPECT().LedgerRepo().Return(lRepoMock).Once()
@@ -544,7 +448,7 @@ func TestTipTransferUsecase(t *testing.T) {
 		uowMock.EXPECT().Rollback(ctx).Return(nil).Once()
 
 		lRepoMock.EXPECT().SaveLedgerEntry(ctx, mock.Anything).Return(nil).Times(3)
-		bRepoMock.EXPECT().SaveBalance(ctx, mock.Anything).Return(nil).Times(3)
+		bRepoMock.EXPECT().SaveBalance(ctx, mock.Anything).Return(nil).Times(2)
 
 		commitErr := errors.New("serialization failure")
 		uowMock.EXPECT().Commit(ctx).Return(commitErr).Once()
@@ -565,11 +469,9 @@ func TestTipTransferUsecase(t *testing.T) {
 
 		senderBal := domain.NewBalance(senderID, 1000)
 		creatorBal := domain.NewBalance(creatorID, 500)
-		platformBal := domain.NewBalance(platformID, 100)
 
 		cacheMock.EXPECT().ReadBalance(ctx, senderID).Return(senderBal, nil).Once()
 		cacheMock.EXPECT().ReadBalance(ctx, creatorID).Return(creatorBal, nil).Once()
-		cacheMock.EXPECT().ReadBalance(ctx, platformID).Return(platformBal, nil).Once()
 
 		uowfMock.EXPECT().NewUnitOfWork(ctx).Return(uowMock, nil).Once()
 		uowMock.EXPECT().LedgerRepo().Return(lRepoMock).Once()
@@ -577,7 +479,7 @@ func TestTipTransferUsecase(t *testing.T) {
 		uowMock.EXPECT().Rollback(ctx).Return(nil).Once()
 
 		lRepoMock.EXPECT().SaveLedgerEntry(ctx, mock.Anything).Return(nil).Times(3)
-		bRepoMock.EXPECT().SaveBalance(ctx, mock.Anything).Return(nil).Times(3)
+		bRepoMock.EXPECT().SaveBalance(ctx, mock.Anything).Return(nil).Times(2)
 		uowMock.EXPECT().Commit(ctx).Return(nil).Once()
 
 		// Sender cache save fails -> triggers InvalidateKey
@@ -588,13 +490,9 @@ func TestTipTransferUsecase(t *testing.T) {
 
 		cacheMock.EXPECT().InvalidateKey(ctx, senderID).Return(nil).Once()
 
-		// Creator and platform cache saves still execute
+		// Creator cache save still executes
 		cacheMock.EXPECT().SaveBalance(ctx, mock.MatchedBy(func(b *domain.Balance) bool {
 			return b.UserID == creatorID
-		})).Return(nil).Once()
-
-		cacheMock.EXPECT().SaveBalance(ctx, mock.MatchedBy(func(b *domain.Balance) bool {
-			return b.UserID == platformID
 		})).Return(nil).Once()
 
 		tu := newTipTransferUsecase(t, uowfMock, cacheMock, bRepoReadOnlyMock, splitBasisPoints, platformID)

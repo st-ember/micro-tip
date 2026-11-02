@@ -6,6 +6,7 @@ package mocks
 
 import (
 	"context"
+	"time"
 
 	"github.com/st-ember/microtip/internal/domain"
 	mock "github.com/stretchr/testify/mock"
@@ -91,6 +92,78 @@ func (_c *MockLedgerRepo_SaveLedgerEntry_Call) Return(err error) *MockLedgerRepo
 }
 
 func (_c *MockLedgerRepo_SaveLedgerEntry_Call) RunAndReturn(run func(ctx context.Context, entry *domain.LedgerEntry) error) *MockLedgerRepo_SaveLedgerEntry_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SumLedgerByUserIDWithCutOffTime provides a mock function for the type MockLedgerRepo
+func (_mock *MockLedgerRepo) SumLedgerByUserIDWithCutOffTime(ctx context.Context, userID string, cutoffTime time.Time) (int64, error) {
+	ret := _mock.Called(ctx, userID, cutoffTime)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SumLedgerByUserIDWithCutOffTime")
+	}
+
+	var r0 int64
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, time.Time) (int64, error)); ok {
+		return returnFunc(ctx, userID, cutoffTime)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, time.Time) int64); ok {
+		r0 = returnFunc(ctx, userID, cutoffTime)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, time.Time) error); ok {
+		r1 = returnFunc(ctx, userID, cutoffTime)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockLedgerRepo_SumLedgerByUserIDWithCutOffTime_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SumLedgerByUserIDWithCutOffTime'
+type MockLedgerRepo_SumLedgerByUserIDWithCutOffTime_Call struct {
+	*mock.Call
+}
+
+// SumLedgerByUserIDWithCutOffTime is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID string
+//   - cutoffTime time.Time
+func (_e *MockLedgerRepo_Expecter) SumLedgerByUserIDWithCutOffTime(ctx interface{}, userID interface{}, cutoffTime interface{}) *MockLedgerRepo_SumLedgerByUserIDWithCutOffTime_Call {
+	return &MockLedgerRepo_SumLedgerByUserIDWithCutOffTime_Call{Call: _e.mock.On("SumLedgerByUserIDWithCutOffTime", ctx, userID, cutoffTime)}
+}
+
+func (_c *MockLedgerRepo_SumLedgerByUserIDWithCutOffTime_Call) Run(run func(ctx context.Context, userID string, cutoffTime time.Time)) *MockLedgerRepo_SumLedgerByUserIDWithCutOffTime_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 time.Time
+		if args[2] != nil {
+			arg2 = args[2].(time.Time)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockLedgerRepo_SumLedgerByUserIDWithCutOffTime_Call) Return(n int64, err error) *MockLedgerRepo_SumLedgerByUserIDWithCutOffTime_Call {
+	_c.Call.Return(n, err)
+	return _c
+}
+
+func (_c *MockLedgerRepo_SumLedgerByUserIDWithCutOffTime_Call) RunAndReturn(run func(ctx context.Context, userID string, cutoffTime time.Time) (int64, error)) *MockLedgerRepo_SumLedgerByUserIDWithCutOffTime_Call {
 	_c.Call.Return(run)
 	return _c
 }

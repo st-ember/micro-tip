@@ -90,16 +90,6 @@ func (tu *tipTransferUsecase) Execute(ctx context.Context, cmd *domain.TipTransf
 		return fmt.Errorf("update creator balance: %w", err)
 	}
 
-	platformB, err := tu.retrieveBalance(ctx, tu.platformID)
-	if err != nil {
-		return fmt.Errorf("retrieve platform balance: %w", err)
-	}
-
-	updatedPB, err := platformB.UpdateBalance(pShare)
-	if err != nil {
-		return fmt.Errorf("update platform balance: %w", err)
-	}
-
 	// Generate transactionID
 	txID := uuid.NewString()
 
@@ -162,10 +152,6 @@ func (tu *tipTransferUsecase) Execute(ctx context.Context, cmd *domain.TipTransf
 		return fmt.Errorf("save creator balance: %w", err)
 	}
 
-	if err := bRepo.SaveBalance(ctx, updatedPB); err != nil {
-		return fmt.Errorf("save platform balance: %w", err)
-	}
-
 	// Commit transaction
 	if err := uow.Commit(ctx); err != nil {
 		return fmt.Errorf("commit transaction: %w", err)
@@ -189,13 +175,6 @@ func (tu *tipTransferUsecase) Execute(ctx context.Context, cmd *domain.TipTransf
 		tu.logger.ErrorCtx(
 			ctx, "cache creator balance", err,
 			"user_id", cmd.CreatorID, "idempotency_key", cmd.IdempotencyKey,
-		)
-	}
-
-	if err := tu.saveOrInvalidateCache(ctx, updatedPB); err != nil {
-		tu.logger.ErrorCtx(
-			ctx, "cache platform balance", err,
-			"user_id", tu.platformID, "idempotency_key", cmd.IdempotencyKey,
 		)
 	}
 

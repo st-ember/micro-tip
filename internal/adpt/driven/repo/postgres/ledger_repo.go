@@ -3,7 +3,9 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+	"time"
 
 	"github.com/st-ember/microtip/internal/app/port/repo"
 	"github.com/st-ember/microtip/internal/domain"
@@ -33,4 +35,24 @@ func (lr *PostgresLedgerRepo) SaveLedgerEntry(ctx context.Context, entry *domain
 	}
 
 	return nil
+}
+
+func (lr *PostgresLedgerRepo) SumLedgerByUserIDWithCutOffTime(
+	ctx context.Context, userID string, cutoffTime time.Time,
+) (int64, error) {
+	query := `SELECT COALESCE(SUM(amount), 0) FROM ledger_entries WHERE user_id = $1 and created_at > $2;`
+
+	var sum int64
+	err := lr.tx.QueryRowContext(ctx, query, userID, cutoffTime).Scan(
+		&sum,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, sql.ErrNoRows
+		}
+
+		return 0, fmt.Errorf("scan balance: %w", err)
+	}
+
+	return sum, nil
 }

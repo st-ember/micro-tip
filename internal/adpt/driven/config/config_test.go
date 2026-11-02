@@ -14,7 +14,8 @@ func TestLoadConfig_Defaults(t *testing.T) {
 		"REDIS_BALANCE_EXP_HOUR", "REDIS_ORDER_EXP_HOUR", "ECPAY_HASH_KEY",
 		"ECPAY_HASH_IV", "SPLIT_BASIS_POINTS", "PLATFORM_ID",
 		"ECPAY_MERCHANT_ID", "ECPAY_TRADE_DESC", "ECPAY_RETURN_URL",
-		"ECPAY_CLIENT_BACK_URL", "ECPAY_PAYMENT_URL", "PORT",
+		"ECPAY_CLIENT_BACK_URL", "ECPAY_PAYMENT_URL", "PORT", "LOG_LEVEL",
+		"SYNC_PLATFORM_BALANCE_INTERVAL_SEC",
 	}
 	for _, env := range envVars {
 		orig := os.Getenv(env)
@@ -77,6 +78,9 @@ func TestLoadConfig_Defaults(t *testing.T) {
 	if cfg.LogLevel != slog.LevelInfo {
 		t.Errorf("expected default LogLevel, got %s", cfg.LogLevel)
 	}
+	if cfg.SyncPlatformBalanceIntervalSec != 600 {
+		t.Errorf("expected default SyncPlatformBalanceIntervalSec, got %d", cfg.SyncPlatformBalanceIntervalSec)
+	}
 }
 
 func TestLoadConfig_EnvOverrides(t *testing.T) {
@@ -97,6 +101,7 @@ func TestLoadConfig_EnvOverrides(t *testing.T) {
 	t.Setenv("ECPAY_PAYMENT_URL", "https://test/pay")
 	t.Setenv("PORT", "9090")
 	t.Setenv("LOG_LEVEL", "ERROR")
+	t.Setenv("SYNC_PLATFORM_BALANCE_INTERVAL_SEC", "1000")
 
 	cfg := LoadConfig()
 
@@ -150,6 +155,9 @@ func TestLoadConfig_EnvOverrides(t *testing.T) {
 	}
 	if cfg.LogLevel != slog.LevelError {
 		t.Errorf("expected overridden LogLevel, got %s", cfg.LogLevel)
+	}
+	if cfg.SyncPlatformBalanceIntervalSec != 1000 {
+		t.Errorf("expected overridden SyncPlatformBalanceIntervalSec, got %d", cfg.SyncPlatformBalanceIntervalSec)
 	}
 }
 
